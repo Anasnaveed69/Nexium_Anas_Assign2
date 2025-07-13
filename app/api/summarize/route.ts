@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     // Save full text to MongoDB
     let client
     try {
-      client = await clientPromise
+      client = await clientPromise()
     } catch (e) {
       throw new Error('MongoDB connection error: ' + (e as Error).message)
     }

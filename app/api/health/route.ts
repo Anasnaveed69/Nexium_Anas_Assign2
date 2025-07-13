@@ -13,11 +13,15 @@ export async function GET(req: NextRequest) {
 
   // Check MongoDB connection
   let mongoStatus = 'ok'
-  try {
-    const client = await clientPromise
-    await client.db('blog_summarizer').command({ ping: 1 })
-  } catch (e) {
-    mongoStatus = 'error: ' + (e as Error).message
+  if (!process.env.MONGODB_URI) {
+    mongoStatus = 'error: MONGODB_URI environment variable not set'
+  } else {
+    try {
+      const client = await clientPromise()
+      await client.db('blog_summarizer').command({ ping: 1 })
+    } catch (e) {
+      mongoStatus = 'error: ' + (e as Error).message
+    }
   }
 
   // Check Supabase connection
