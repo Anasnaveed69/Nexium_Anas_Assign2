@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
-import clientPromise from '@/lib/mongodb'
-import { supabase } from '@/lib/supabase'
 import { urduDict } from '@/lib/urdu-dict'
 
 function checkEnv() {
@@ -77,12 +75,14 @@ export async function POST(req: NextRequest) {
     const summary_urdu = translateToUrdu(summary)
 
     // Save summary to Supabase
-    const { error: supabaseError } = await supabase.from('summaries').insert([{ url, title, summary, summary_urdu }])
+    const { supabase } = await import('@/lib/supabase')
+    const { error: supabaseError } = await supabase().from('summaries').insert([{ url, title, summary, summary_urdu }])
     if (supabaseError) throw new Error('Supabase error: ' + supabaseError.message)
 
     // Save full text to MongoDB
     let client
     try {
+      const { default: clientPromise } = await import('@/lib/mongodb')
       client = await clientPromise()
     } catch (e) {
       throw new Error('MongoDB connection error: ' + (e as Error).message)

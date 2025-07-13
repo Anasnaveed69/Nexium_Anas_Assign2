@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import clientPromise from '@/lib/mongodb'
-import { supabase } from '@/lib/supabase'
 
 export async function GET(req: NextRequest) {
+  // During build time, return a simple response without checking connections
+  if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+    return NextResponse.json({
+      status: 'build-time',
+      message: 'Health check not available during build',
+    })
+  }
+
   // Check environment variables
   const envVars = [
     'NEXT_PUBLIC_SUPABASE_URL',
@@ -17,6 +23,7 @@ export async function GET(req: NextRequest) {
     mongoStatus = 'error: MONGODB_URI environment variable not set'
   } else {
     try {
+      const { default: clientPromise } = await import('@/lib/mongodb')
       const client = await clientPromise()
       await client.db('blog_summarizer').command({ ping: 1 })
     } catch (e) {
@@ -37,11 +44,16 @@ export async function GET(req: NextRequest) {
 
   // Check Supabase connection
   let supabaseStatus = 'ok'
-  try {
-    const { error } = await supabase.from('summaries').select('*').limit(1)
-    if (error) throw error
-  } catch (e) {
-    supabaseStatus = 'error: ' + (e as Error).message
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    supabaseStatus = 'error: Supabase environment variables not set'
+  } else {
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { error } = await supabase().from('summaries').select('*').limit(1)
+      if (error) throw error
+    } catch (e) {
+      supabaseStatus = 'error: ' + (e as Error).message
+    }
   }
 
   return NextResponse.json({
