@@ -20,7 +20,18 @@ export async function GET(req: NextRequest) {
       const client = await clientPromise()
       await client.db('blog_summarizer').command({ ping: 1 })
     } catch (e) {
-      mongoStatus = 'error: ' + (e as Error).message
+      const error = e as Error
+      console.error('MongoDB connection error:', error)
+      mongoStatus = `error: ${error.message}`
+      
+      // Provide more specific error information
+      if (error.message.includes('SSL') || error.message.includes('TLS')) {
+        mongoStatus += ' (SSL/TLS configuration issue)'
+      } else if (error.message.includes('timeout')) {
+        mongoStatus += ' (Connection timeout - check network access)'
+      } else if (error.message.includes('authentication')) {
+        mongoStatus += ' (Authentication failed - check credentials)'
+      }
     }
   }
 
